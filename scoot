@@ -81,9 +81,9 @@ local Library do
         FadeSpeed = 0.2,
 
         Folders = {
-            Directory = "matcha",
-            Configs = "matcha/Configs",
-            Assets = "matcha/Assets",
+            Directory = "Avenir",
+            Configs = "Avenir/Configs",
+            Assets = "Avenir/Assets",
         },
 
         Images = {
@@ -210,13 +210,13 @@ local Library do
 			["Inline"] = FromRGB(30, 34, 30),               -- Giữa các phần tử
 			["Hovered Element"] = FromRGB(55, 62, 50),      -- Hover: nhấn xanh tươi
 			["Page Background"] = FromRGB(18, 20, 18),      -- Nền trang phụ
-			["Outline"] = FromRGB(65, 74, 60),              -- Outline
-			["Element"] = FromRGB(36, 42, 35),              -- Các khối giao diện
+			["Outline"] = FromRGB(64, 0, 248),              -- Outline
+			["Element"] = FromRGB(105, 137, 255),              -- Các khối giao diện
 			["Gradient"] = FromRGB(200, 240, 180),          -- Gradient nhẹ, xanh tươi
 			["Text"] = FromRGB(240, 245, 230),              -- Chữ sáng, hơi ngà
 			["Text Stroke"] = FromRGB(0, 0, 0),
 			["Placeholder Text"] = FromRGB(165, 175, 160),
-			["Accent"] = FromRGB(169, 242, 112)             -- 🎯 Matcha tươi
+			["Accent"] = FromRGB(105, 137, 255)             -- 🎯 Matcha tươi
 		}
     }
 

@@ -1317,8 +1317,8 @@ ConfigSection:ConfigSection({
     end
 })
 
--- Manual config control
--- Window:SaveConfig("myconfig")
--- Window:LoadConfig("myconfig")
--- Window:GetValue("AimbotEnabled")
--- Window:SetValue("AimbotFOV", 120)
+getgenv().Library = Library
+return Library
+
+
+

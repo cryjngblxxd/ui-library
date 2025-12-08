@@ -1,8 +1,5 @@
---[[
-    Avenir UI Library v4.2 - CS:GO Style
-    Fixed: ColorPicker, Tooltip position, Keybind modes, Theme switching
+--[
     Added: Rain/Snow effects, UI customizations, Animations
-    Thanks To ai for fixing 3 mistakes i did
 ]]
 
 local inputService = game:GetService("UserInputService")
@@ -15,7 +12,7 @@ local mouse = localPlayer:GetMouse()
 
 -- ===================== THEMES =====================
 local Themes = {
-    Avenir = {
+    Azure = {
         Background = Color3.fromRGB(16, 16, 16),
         Main = Color3.fromRGB(22, 22, 22),
         Accent = Color3.fromRGB(74, 144, 217),
@@ -123,9 +120,9 @@ local Themes = {
 
 -- ===================== LIBRARY =====================
 local Library = {
-    Theme = Themes.Avenir,
-    ThemeName = "Avenir",
-    DefaultTheme = "Avenir",
+    Theme = Themes.Azure,
+    ThemeName = "Azure",
+    DefaultTheme = "Azure",
     Themes = Themes,
     CustomThemes = {},
     Flags = {},
@@ -139,8 +136,8 @@ local Library = {
     Unloaded = false,
     ActiveTab = nil,
     HideOnExecute = false,
-    SaveFolder = "AvenirConfigs",
-    ThemeSaveFolder = "AvenirThemes",
+    SaveFolder = "AzureConfigs",
+    ThemeSaveFolder = "AzureThemes",
     ActiveKeybinds = {},
     AutoLoadConfig = "",
     NotificationPosition = "TopRight",
@@ -162,9 +159,6 @@ local Library = {
     AccentGlow = false,
     RainbowAccent = false,
     RainbowSpeed = 1,
-    BorderWidth = 1,
-    CornerRadius = 0,
-    FontSize = 12,
     
     -- Particles storage
     Particles = {},
@@ -230,27 +224,9 @@ local function MakeDraggable(frame, handle)
     end)
 end
 
-local function HSVToRGB(h, s, v)
-    local r, g, b
-    local i = math.floor(h * 6)
-    local f = h * 6 - i
-    local p = v * (1 - s)
-    local q = v * (1 - f * s)
-    local t = v * (1 - (1 - f) * s)
-    i = i % 6
-    if i == 0 then r, g, b = v, t, p
-    elseif i == 1 then r, g, b = q, v, p
-    elseif i == 2 then r, g, b = p, v, t
-    elseif i == 3 then r, g, b = p, q, v
-    elseif i == 4 then r, g, b = t, p, v
-    elseif i == 5 then r, g, b = v, p, q
-    end
-    return Color3.fromRGB(r * 255, g * 255, b * 255)
-end
-
 -- ===================== CREATE GUI =====================
 local ScreenGui = Create("ScreenGui", {
-    Name = "AvenirUI",
+    Name = "AzureUI",
     ResetOnSpawn = false,
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     DisplayOrder = 999,
@@ -261,7 +237,7 @@ if not ScreenGui.Parent then ScreenGui.Parent = localPlayer:WaitForChild("Player
 
 -- Blur Effect
 local BlurEffect = Create("BlurEffect", {
-    Name = "AvenirBlur",
+    Name = "AzureBlur",
     Size = 0,
     Parent = game:GetService("Lighting"),
 })
@@ -299,7 +275,6 @@ local function CreateParticle(isSnow)
 end
 
 local function UpdateParticles()
-    -- Clear existing particles
     for _, particle in pairs(Library.Particles) do
         if particle and particle.Parent then
             particle:Destroy()
@@ -309,7 +284,6 @@ local function UpdateParticles()
     
     if not Library.RainEnabled and not Library.SnowEnabled then return end
     
-    -- Create new particles
     local isSnow = Library.SnowEnabled
     for i = 1, Library.ParticleCount do
         local particle = CreateParticle(isSnow)
@@ -321,7 +295,7 @@ end
 -- Particle animation loop
 task.spawn(function()
     while true do
-        task.wait(0.016) -- ~60fps
+        task.wait(0.016)
         if Library.Unloaded then break end
         
         if (Library.RainEnabled or Library.SnowEnabled) and Library.Toggled then
@@ -454,7 +428,7 @@ local TitleLabel = Create("TextLabel", {
     Position = UDim2.new(0, 10, 0, 0),
     Size = UDim2.new(0, 100, 1, 0),
     Font = Enum.Font.GothamBold,
-    Text = "Avenir",
+    Text = "AZURE",
     TextColor3 = Library.Theme.Font,
     TextSize = 13,
     TextXAlignment = Enum.TextXAlignment.Left,
@@ -561,7 +535,7 @@ local ContentContainerInner = Create("Frame", {
     ClipsDescendants = true,
 })
 
--- Dropdown Container (for z-index fix)
+-- Dropdown Container
 local DropdownContainer = Create("Frame", {
     Name = "DropdownContainer",
     Parent = Layer5,
@@ -616,7 +590,6 @@ function Library:Show()
     MainFrame.Size = UDim2.new(0, 804, 0, 0)
     Tween(MainFrame, {Size = UDim2.new(0, 804, 0, 554)}, 0.25)
     
-    -- Show particles
     if Library.RainEnabled or Library.SnowEnabled then
         ParticleContainer.Visible = true
     end
@@ -636,7 +609,6 @@ function Library:Hide()
     
     Tween(MainFrame, {Size = UDim2.new(0, 804, 0, 0)}, 0.25)
     
-    -- Hide particles
     ParticleContainer.Visible = false
     
     task.delay(0.25, function()
@@ -663,7 +635,6 @@ table.insert(Library.Connections, inputService.InputBegan:Connect(function(input
         Library:Toggle()
     end
     
-    -- Handle keybinds
     if not gameProcessed and not Library.IsTyping then
         for flag, data in pairs(Library.ActiveKeybinds) do
             if data.Key == input.KeyCode or data.Key == input.UserInputType then
@@ -796,7 +767,7 @@ function Library:Notify(text, duration, notifType)
         Size = UDim2.new(1, 0, 0, 2),
     })
     
-    local NotifText = Create("TextLabel", {
+    Create("TextLabel", {
         Parent = Notif,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 12, 0, 0),
@@ -850,7 +821,7 @@ local WatermarkText = Create("TextLabel", {
     Position = UDim2.new(0, 10, 0, 2),
     Size = UDim2.new(1, -20, 1, -2),
     Font = Enum.Font.GothamSemibold,
-    Text = "Avenir.CC | 60 FPS | 0 MS",
+    Text = "AZURE.CC | 60 FPS | 0 MS",
     TextColor3 = Library.Theme.Font,
     TextSize = 11,
     TextXAlignment = Enum.TextXAlignment.Left,
@@ -1027,7 +998,7 @@ function Library:ShowKeybindModePopup(toggle, position)
     KeybindModePopup.Visible = true
 end
 
--- ===================== TOOLTIP (FIXED POSITION) =====================
+-- ===================== TOOLTIP =====================
 local Tooltip = Create("Frame", {
     Name = "Tooltip",
     Parent = ScreenGui,
@@ -1069,16 +1040,14 @@ function Library:HideTooltip()
     Tooltip.Visible = false
 end
 
--- Fixed tooltip position - follows mouse precisely
 table.insert(Library.Connections, runService.Heartbeat:Connect(function()
     if Tooltip.Visible then
         local mousePos = inputService:GetMouseLocation()
-        -- Position tooltip below and slightly to the right of cursor
         Tooltip.Position = UDim2.new(0, mousePos.X + 15, 0, mousePos.Y + 10)
     end
 end))
 
--- ===================== COLOR PICKER (FIXED) =====================
+-- ===================== COLOR PICKER =====================
 local ColorPickerFrame = Create("Frame", {
     Name = "ColorPickerFrame",
     Parent = ScreenGui,
@@ -1122,7 +1091,6 @@ local ColorPickerTitle = Create("TextLabel", {
     ZIndex = 501,
 })
 
--- Saturation/Value picker
 local SaturationValue = Create("ImageLabel", {
     Parent = ColorPickerInner,
     BackgroundColor3 = Color3.fromRGB(255, 0, 0),
@@ -1160,7 +1128,6 @@ Create("UIStroke", {
     Thickness = 1,
 })
 
--- Hue slider
 local HueSlider = Create("Frame", {
     Parent = ColorPickerInner,
     BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -1204,7 +1171,6 @@ Create("UIStroke", {
     Thickness = 1,
 })
 
--- Color preview
 local ColorPreview = Create("Frame", {
     Parent = ColorPickerInner,
     BackgroundColor3 = Color3.fromRGB(255, 0, 0),
@@ -1220,7 +1186,6 @@ Create("UIStroke", {
     Thickness = 1,
 })
 
--- Hex input
 local HexInputBox = Create("TextBox", {
     Parent = ColorPickerInner,
     BackgroundColor3 = Library.Theme.ElementBg,
@@ -1241,7 +1206,6 @@ Create("UIStroke", {
     Thickness = 1,
 })
 
--- Apply button
 local ApplyButton = Create("TextButton", {
     Parent = ColorPickerInner,
     BackgroundColor3 = Library.Theme.Accent,
@@ -1292,7 +1256,6 @@ local function ApplyColorPickerColor()
     end
 end
 
--- SatVal input
 SaturationValue.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         pickingSatVal = true
@@ -1305,7 +1268,6 @@ SaturationValue.InputEnded:Connect(function(input)
     end
 end)
 
--- Hue input
 HueSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         pickingHue = true
@@ -1318,7 +1280,6 @@ HueSlider.InputEnded:Connect(function(input)
     end
 end)
 
--- Global input for dragging
 table.insert(Library.Connections, inputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         pickingSatVal = false
@@ -1374,7 +1335,6 @@ ApplyButton.MouseLeave:Connect(function()
     Tween(ApplyButton, {BackgroundColor3 = Library.Theme.Accent}, 0.1)
 end)
 
--- Close color picker when clicking outside
 table.insert(Library.Connections, inputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 and ColorPickerFrame.Visible then
         local mousePos = inputService:GetMouseLocation()
@@ -1383,7 +1343,6 @@ table.insert(Library.Connections, inputService.InputBegan:Connect(function(input
         
         if mousePos.X < pos.X or mousePos.X > pos.X + size.X or
            mousePos.Y < pos.Y or mousePos.Y > pos.Y + size.Y then
-            -- Don't close if clicking on color display
             local found = false
             for _, element in pairs(Library.Elements) do
                 if element.Type == "ColorPicker" and element.Display then
@@ -1802,7 +1761,7 @@ function Library:CreateTab(name)
                 end
             end
             
-                        function Toggle:Set(value)
+            function Toggle:Set(value)
                 Toggle.Value = value
                 Library.Flags[flag] = value
                 UpdateToggle()
@@ -1832,7 +1791,7 @@ function Library:CreateTab(name)
                 end
             end
             
-            function Toggle:UpdateTheme()
+                        function Toggle:UpdateTheme()
                 CheckboxOuter.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
                 CheckboxInner.BackgroundColor3 = Library.Theme.ElementBg
                 CheckboxFill.BackgroundColor3 = Library.Theme.Accent
@@ -1849,6 +1808,15 @@ function Library:CreateTab(name)
             
             ToggleButton.MouseButton1Click:Connect(function()
                 if Library.Unloaded then return end
+                
+                -- Check if Always mode is active - if so, disable it
+                local keybindData = Library.ActiveKeybinds[flag .. "_kb"]
+                if keybindData and keybindData.Mode == "Always" and keybindData.AlwaysActive then
+                    keybindData.AlwaysActive = false
+                    Toggle:Set(false)
+                    return
+                end
+                
                 Toggle:Set(not Toggle.Value)
             end)
             
@@ -2016,20 +1984,6 @@ function Library:CreateTab(name)
             SliderButton.MouseLeave:Connect(function()
                 Library:HideTooltip()
             end)
-            
-            table.insert(Library.Connections, inputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    sliding = false
-                end
-            end))
-            
-            table.insert(Library.Connections, runService.Heartbeat:Connect(function()
-                if sliding and SliderInner.AbsoluteSize.X > 0 then
-                    local mousePos = inputService:GetMouseLocation()
-                    local percent = math.clamp((mousePos.X - SliderInner.AbsolutePosition.X) / SliderInner.AbsoluteSize.X, 0, 1)
-                    UpdateSlider(min + (max - min) * percent)
-                end
-            end))
             
             UpdateSlider(default)
             Library.Options[flag] = Slider
@@ -2622,7 +2576,7 @@ function Library:CreateTab(name)
             Keybind.Outer = KeybindOuter
             Keybind.Mid = KeybindMid
             Keybind.Inner = KeybindInner
-            Keybind.Text = KeybindText
+            Keybind.TextLabel = KeybindText
             Keybind.LabelObj = KeybindLabel
             
             function Keybind:Set(key)
@@ -2653,6 +2607,8 @@ function Library:CreateTab(name)
                 Keybind.Mode = newMode
                 if Library.ActiveKeybinds[flag] then
                     Library.ActiveKeybinds[flag].Mode = newMode
+                    Library.ActiveKeybinds[flag].AlwaysActive = false
+                    Library.ActiveKeybinds[flag].Holding = false
                 end
             end
             
@@ -3034,7 +2990,7 @@ function Library:UpdateKeybindsList()
             
             local modeIndicator = ""
             if data.Mode == "Hold" then
-                modeIndicator = data.Holding and " [H]" or ""
+                modeIndicator = " [H]"
             elseif data.Mode == "Always" then
                 modeIndicator = " [A]"
             end
@@ -3368,6 +3324,36 @@ function Library:Unload()
     ScreenGui:Destroy()
 end
 
+-- ===================== SLIDER INPUT FIX =====================
+local slidingSlider = nil
+
+table.insert(Library.Connections, inputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        slidingSlider = nil
+    end
+end))
+
+table.insert(Library.Connections, runService.Heartbeat:Connect(function()
+    -- Handle slider dragging
+    for _, element in pairs(Library.Elements) do
+        if element.Type == "Slider" and element.sliding then
+            if element.Inner and element.Inner.AbsoluteSize.X > 0 then
+                local mousePos = inputService:GetMouseLocation()
+                local percent = math.clamp((mousePos.X - element.Inner.AbsolutePosition.X) / element.Inner.AbsoluteSize.X, 0, 1)
+                local value = element.Min + (element.Max - element.Min) * percent
+                element:Set(value)
+            end
+        end
+    end
+end))
+
+-- Fix slider sliding variable
+for _, element in pairs(Library.Elements) do
+    if element.Type == "Slider" then
+        element.sliding = false
+    end
+end
+
 -- ===================== RAINBOW ACCENT =====================
 task.spawn(function()
     local hue = 0
@@ -3389,7 +3375,7 @@ task.spawn(function()
     end
 end)
 
--- ===================== BACKGROUND UPDATES =====================
+-- ===================== WATERMARK UPDATE =====================
 task.spawn(function()
     while not Library.Unloaded do
         task.wait(0.5)
@@ -3399,13 +3385,14 @@ task.spawn(function()
             pcall(function()
                 ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
             end)
-            WatermarkText.Text = "Avenir.CC | " .. fps .. " FPS | " .. ping .. " MS | " .. os.date("%H:%M:%S")
+            WatermarkText.Text = "AZURE.CC | " .. fps .. " FPS | " .. ping .. " MS | " .. os.date("%H:%M:%S")
             local width = WatermarkText.TextBounds.X + 24
             Watermark.Size = UDim2.new(0, math.max(width, 180), 0, 26)
         end
     end
 end)
 
+-- ===================== KEYBINDS LIST UPDATE =====================
 task.spawn(function()
     while not Library.Unloaded do
         task.wait(0.5)
@@ -3415,569 +3402,11 @@ task.spawn(function()
     end
 end)
 
--- ===================== CREATE TABS =====================
-
--- Legit Tab
-local LegitTab = Library:CreateTab("Legit")
-
-local AimbotSection = LegitTab:CreateSection("Aimbot", "Left")
-AimbotSection:AddToggle({
-    Text = "Enabled",
-    Flag = "AimbotEnabled",
-    Tooltip = "Enable aimbot assistance",
-})
-AimbotSection:AddSlider({
-    Text = "FOV",
-    Flag = "AimbotFOV",
-    Min = 1, Max = 500, Default = 100,
-    Tooltip = "Field of view radius",
-})
-AimbotSection:AddSlider({
-    Text = "Smoothness",
-    Flag = "AimbotSmooth",
-    Min = 1, Max = 50, Default = 10,
-})
-AimbotSection:AddTextbox({
-    Text = "Prediction",
-    Flag = "AimbotPrediction",
-    Default = "0.165",
-    Placeholder = "Enter prediction...",
-})
-AimbotSection:AddDropdown({
-    Text = "Target Part",
-    Flag = "AimbotPart",
-    Options = {"Head", "Torso", "Random"},
-    Default = "Head",
-})
-AimbotSection:AddToggle({
-    Text = "Show FOV",
-    Flag = "ShowFOV",
-})
-AimbotSection:AddColorPicker({
-    Text = "FOV Color",
-    Flag = "FOVColor",
-    Default = Color3.fromRGB(74, 144, 217),
-})
-AimbotSection:AddKeybind({
-    Text = "Aim Key",
-    Flag = "AimKey",
-    ToggleFlag = "AimbotEnabled",
-})
-
-local TriggerSection = LegitTab:CreateSection("Triggerbot", "Right")
-TriggerSection:AddToggle({
-    Text = "Enabled",
-    Flag = "TriggerEnabled",
-})
-TriggerSection:AddSlider({
-    Text = "Delay",
-    Flag = "TriggerDelay",
-    Min = 0, Max = 500, Default = 50, Suffix = "ms",
-})
-TriggerSection:AddKeybind({
-    Text = "Trigger Key",
-    Flag = "TriggerKey",
-    ToggleFlag = "TriggerEnabled",
-})
-
--- Visuals Tab
-local VisualsTab = Library:CreateTab("Visuals")
-
-local ESPSection = VisualsTab:CreateSection("ESP", "Left")
-ESPSection:AddToggle({ Text = "Enabled", Flag = "ESPEnabled" })
-ESPSection:AddToggle({ Text = "Boxes", Flag = "ESPBoxes" })
-ESPSection:AddToggle({ Text = "Names", Flag = "ESPNames" })
-ESPSection:AddToggle({ Text = "Health Bar", Flag = "ESPHealth" })
-ESPSection:AddToggle({ Text = "Distance", Flag = "ESPDistance" })
-ESPSection:AddSlider({
-    Text = "Max Distance",
-    Flag = "ESPMaxDist",
-    Min = 100, Max = 2000, Default = 1000, Suffix = " studs",
-})
-ESPSection:AddColorPicker({
-    Text = "Enemy Color",
-    Flag = "ESPEnemyColor",
-    Default = Color3.fromRGB(255, 50, 50),
-})
-
-local WorldSection = VisualsTab:CreateSection("World", "Right")
-WorldSection:AddToggle({ Text = "Fullbright", Flag = "Fullbright" })
-WorldSection:AddToggle({ Text = "No Fog", Flag = "NoFog" })
-
--- Players Tab
-local PlayersTab = Library:CreateTab("Players")
-
-local PlayerSection = PlayersTab:CreateSection("Player List", "Left")
-local selectedPlayer = nil
-
-local PlayerDropdown = PlayerSection:AddDropdown({
-    Text = "Select Player",
-    Flag = "SelectedPlayer",
-    Options = {},
-    Callback = function(value) selectedPlayer = value end
-})
-
-local function RefreshPlayers()
-    local list = {}
-    for _, p in pairs(players:GetPlayers()) do
-        if p ~= localPlayer then table.insert(list, p.Name) end
-    end
-    PlayerDropdown:Refresh(list, true)
-end
-
-PlayerSection:AddButton({
-    Text = "Refresh List",
-    Callback = function()
-        RefreshPlayers()
-        Library:Notify("Refreshed!", 1.5)
-    end
-})
-
-PlayerSection:AddButton({
-    Text = "Spectate",
-    Callback = function()
-        if not selectedPlayer then Library:Notify("Select a player!", 2, "Error") return end
-        local target = players:FindFirstChild(selectedPlayer)
-        if target and target.Character and target.Character:FindFirstChild("Humanoid") then
-            workspace.CurrentCamera.CameraSubject = target.Character.Humanoid
-            Library:Notify("Spectating: " .. selectedPlayer, 2, "Success")
-        end
-    end
-})
-
-PlayerSection:AddButton({
-    Text = "Unspectate",
-    Callback = function()
-        if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-            workspace.CurrentCamera.CameraSubject = localPlayer.Character.Humanoid
-            Library:Notify("Stopped spectating", 2)
-        end
-    end
-})
-
-task.spawn(function()
-    task.wait(1)
-    RefreshPlayers()
-    players.PlayerAdded:Connect(function() task.wait(0.5) RefreshPlayers() end)
-    players.PlayerRemoving:Connect(function() task.wait(0.5) RefreshPlayers() end)
-end)
-
--- Settings Tab
-local SettingsTab = Library:CreateTab("Settings")
-
--- Config Section
-local ConfigSection = SettingsTab:CreateSection("Configs", "Left")
-
-ConfigSection:AddTextbox({
-    Text = "Config Name",
-    Flag = "ConfigName",
-    Placeholder = "Enter name...",
-})
-
-ConfigSection:AddButton({
-    Text = "Create Config",
-    Callback = function()
-        if Library:SaveConfig(Library.Flags.ConfigName) then
-            Library.Options.SelectedConfig:Refresh(Library:GetConfigs(), true)
-        end
-    end
-})
-
-ConfigSection:AddDivider()
-
-local ConfigDropdown = ConfigSection:AddDropdown({
-    Text = "Select Config",
-    Flag = "SelectedConfig",
-    Options = Library:GetConfigs(),
-})
-
-ConfigSection:AddButton({ Text = "Load", Callback = function() Library:LoadConfig(Library.Flags.SelectedConfig) end })
-ConfigSection:AddButton({ Text = "Save", Callback = function() Library:SaveConfig(Library.Flags.SelectedConfig) end })
-ConfigSection:AddButton({ Text = "Delete", Confirm = true, Callback = function()
-    Library:DeleteConfig(Library.Flags.SelectedConfig)
-    ConfigDropdown:Refresh(Library:GetConfigs())
-end })
-
-ConfigSection:AddDivider()
-
-local autoLoadName = Library:GetAutoLoad()
-local AutoLoadLabel = ConfigSection:AddLabel("Auto-load: " .. (autoLoadName ~= "" and autoLoadName or "None"))
-
-ConfigSection:AddButton({
-    Text = "Set Auto-Load",
-    Callback = function()
-        if Library.Flags.SelectedConfig and Library.Flags.SelectedConfig ~= "" then
-            Library:SetAutoLoad(Library.Flags.SelectedConfig)
-            AutoLoadLabel:Set("Auto-load: " .. Library.Flags.SelectedConfig)
-        else
-            Library:Notify("Select a config first!", 2, "Error")
-        end
-    end
-})
-
--- Theme Section
-local ThemeSection = SettingsTab:CreateSection("Themes", "Right")
-
-local function GetAllThemes()
-    local themes = {"Avenir", "Fatality", "Neverlose", "Skeet", "Pandora", "Midnight", "Ocean", "Crimson"}
-    return themes
-end
-
-ThemeSection:AddDropdown({
-    Text = "Theme",
-    Flag = "ThemePreset",
-    Options = GetAllThemes(),
-    Default = "Avenir",
-    Callback = function(value)
-        Library:ApplyTheme(value)
-    end
-})
-
--- UI Customization Section
-local CustomSection = SettingsTab:CreateSection("Customization", "Left")
-
-CustomSection:AddToggle({
-    Text = "Show Watermark",
-    Flag = "ShowWatermark",
-    Callback = function(value) Watermark.Visible = value end
-})
-
-CustomSection:AddToggle({
-    Text = "Show Keybinds",
-    Flag = "ShowKeybinds",
-    Callback = function(value)
-        KeybindsList.Visible = value
-        if value then Library:UpdateKeybindsList() end
-    end
-})
-
-CustomSection:AddToggle({
-    Text = "Menu Blur",
-    Flag = "MenuBlur",
-    Callback = function(value)
-        Library.BlurEnabled = value
-        if value and Library.Toggled then
-            Tween(BlurEffect, {Size = 6}, 0.25)
-        else
-            Tween(BlurEffect, {Size = 0}, 0.25)
-        end
-    end
-})
-
-CustomSection:AddToggle({
-    Text = "Rainbow Accent",
-    Flag = "RainbowAccent",
-    Callback = function(value)
-        Library.RainbowAccent = value
-        if not value then
-            Library:ApplyTheme(Library.ThemeName)
-        end
-    end
-})
-
-CustomSection:AddSlider({
-    Text = "Rainbow Speed",
-    Flag = "RainbowSpeed",
-    Min = 1, Max = 10, Default = 1,
-    Callback = function(value)
-        Library.RainbowSpeed = value
-    end
-})
-
-CustomSection:AddDivider()
-
--- Effects Section
-local EffectsSection = SettingsTab:CreateSection("Effects", "Right")
-
-EffectsSection:AddDropdown({
-    Text = "Background Effect",
-    Flag = "BackgroundEffect",
-    Options = {"None", "Rain", "Snow", "Both"},
-    Default = "None",
-    Callback = function(value)
-        Library.RainEnabled = value == "Rain" or value == "Both"
-        Library.SnowEnabled = value == "Snow" or value == "Both"
-        UpdateParticles()
-        
-        if Library.Toggled then
-            ParticleContainer.Visible = Library.RainEnabled or Library.SnowEnabled
-        end
-    end
-})
-
-EffectsSection:AddColorPicker({
-    Text = "Particle Color",
-    Flag = "ParticleColor",
-    Default = Color3.fromRGB(255, 255, 255),
-    Callback = function(value)
-        Library.ParticleColor = value
-    end
-})
-
-EffectsSection:AddSlider({
-    Text = "Particle Count",
-    Flag = "ParticleCount",
-    Min = 10, Max = 150, Default = 50,
-    Callback = function(value)
-        Library.ParticleCount = value
-        UpdateParticles()
-    end
-})
-
-EffectsSection:AddSlider({
-    Text = "Particle Speed",
-    Flag = "ParticleSpeed",
-    Min = 1, Max = 10, Default = 2,
-    Callback = function(value)
-        Library.ParticleSpeed = value
-    end
-})
-
-EffectsSection:AddDivider()
-
-EffectsSection:AddDropdown({
-    Text = "Notification Position",
-    Flag = "NotifPosition",
-    Options = {"TopRight", "TopLeft", "BottomRight", "BottomLeft"},
-    Default = "TopRight",
-    Callback = function(value)
-        Library:SetNotificationPosition(value)
-    end
-})
-
-EffectsSection:AddKeybind({
-    Text = "Menu Key",
-    Flag = "MenuToggleKey",
-    Default = Enum.KeyCode.RightShift,
-})
-
--- Colors Section
-local ColorsSection = SettingsTab:CreateSection("Colors", "Left")
-
-ColorsSection:AddColorPicker({
-    Text = "Accent Color",
-    Flag = "CustomAccent",
-    Default = Library.Theme.Accent,
-    Callback = function(value)
-        if not Library.RainbowAccent then
-            Library.Theme.Accent = value
-            AccentTop.BackgroundColor3 = value
-            WatermarkAccent.BackgroundColor3 = value
-            KeybindsAccent.BackgroundColor3 = value
-            TitleAccent.TextColor3 = value
-            
-            for _, tab in pairs(Library.Tabs) do
-                tab.Indicator.BackgroundColor3 = value
-                tab.Content.ScrollBarImageColor3 = value
-            end
-            
-            TabList.ScrollBarImageColor3 = value
-        end
-    end
-})
-
-ColorsSection:AddColorPicker({
-    Text = "Background Color",
-    Flag = "CustomBackground",
-    Default = Library.Theme.Background,
-    Callback = function(value)
-        Library.Theme.Background = value
-        Layer5.BackgroundColor3 = value
-        ContentContainerInner.BackgroundColor3 = value
-    end
-})
-
-ColorsSection:AddColorPicker({
-    Text = "Main Color",
-    Flag = "CustomMain",
-    Default = Library.Theme.Main,
-    Callback = function(value)
-        Library.Theme.Main = value
-        TitleBarInner.BackgroundColor3 = value
-        TabContainerInner.BackgroundColor3 = value
-        Watermark.BackgroundColor3 = value
-        KeybindsList.BackgroundColor3 = value
-        Tooltip.BackgroundColor3 = value
-        ColorPickerInner.BackgroundColor3 = value
-        
-        for _, tab in pairs(Library.Tabs) do
-            for _, section in pairs(tab.Sections) do
-                section.Inner.BackgroundColor3 = value
-            end
-        end
-    end
-})
-
-ColorsSection:AddColorPicker({
-    Text = "Font Color",
-    Flag = "CustomFont",
-    Default = Library.Theme.Font,
-    Callback = function(value)
-        Library.Theme.Font = value
-        TitleLabel.TextColor3 = value
-        WatermarkText.TextColor3 = value
-        KeybindsTitle.TextColor3 = value
-        ColorPickerTitle.TextColor3 = value
-        
-        for _, tab in pairs(Library.Tabs) do
-            if Library.ActiveTab == tab then
-                tab.Label.TextColor3 = value
-            end
-            for _, section in pairs(tab.Sections) do
-                section.Title.TextColor3 = value
-            end
-        end
-    end
-})
-
--- Other Section
-local OtherSection = SettingsTab:CreateSection("Other", "Right")
-
-OtherSection:AddButton({
-    Text = "Copy Game Link",
-    Callback = function()
-        if setclipboard then
-            setclipboard("roblox://placeId=" .. game.PlaceId .. "&gameInstanceId=" .. game.JobId)
-            Library:Notify("Copied to clipboard!", 2, "Success")
-        else
-            Library:Notify("Clipboard not supported!", 2, "Error")
-        end
-    end
-})
-
-OtherSection:AddButton({
-    Text = "Rejoin Server",
-    Confirm = true,
-    Callback = function()
-        Library:Notify("Rejoining...", 2)
-        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId)
-    end
-})
-
-OtherSection:AddButton({
-    Text = "Server Hop",
-    Confirm = true,
-    Callback = function()
-        Library:Notify("Finding server...", 2)
-        task.spawn(function()
-            pcall(function()
-                local servers = httpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-                for _, server in pairs(servers.data) do
-                    if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id)
-                        return
-                    end
-                end
-                Library:Notify("No servers found!", 2, "Error")
-            end)
-        end)
-    end
-})
-
-OtherSection:AddDivider()
-
-OtherSection:AddToggle({
-    Text = "Anti AFK",
-    Flag = "AntiAFK",
-    Callback = function(value)
-        if value then
-            local vu = game:GetService("VirtualUser")
-            local conn = localPlayer.Idled:Connect(function()
-                if Library.Flags.AntiAFK and not Library.Unloaded then
-                    vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-                    task.wait(1)
-                    vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-                end
-            end)
-            table.insert(Library.Connections, conn)
-            Library:Notify("Anti-AFK enabled!", 2, "Success")
-        end
-    end
-})
-
-OtherSection:AddDivider()
-
-OtherSection:AddButton({
-    Text = "Unload",
-    Confirm = true,
-    Callback = function()
-        Library:Unload()
-    end
-})
-
--- ===================== FOV CIRCLE =====================
-local FOVCircle = nil
-
-pcall(function()
-    FOVCircle = Drawing.new("Circle")
-    FOVCircle.Thickness = 1
-    FOVCircle.NumSides = 64
-    FOVCircle.Radius = 100
-    FOVCircle.Filled = false
-    FOVCircle.Visible = false
-    FOVCircle.ZIndex = 999
-    FOVCircle.Transparency = 1
-    FOVCircle.Color = Color3.fromRGB(74, 144, 217)
-end)
-
-table.insert(Library.Connections, runService.Heartbeat:Connect(function()
-    if FOVCircle then
-        if Library.Flags.ShowFOV and Library.Flags.AimbotEnabled then
-            FOVCircle.Visible = true
-            local mousePos = inputService:GetMouseLocation()
-            FOVCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
-            FOVCircle.Radius = Library.Flags.AimbotFOV or 100
-            FOVCircle.Color = Library.Flags.FOVColor or Color3.fromRGB(74, 144, 217)
-        else
-            FOVCircle.Visible = false
-        end
-    end
-end))
-
--- ===================== MENU KEY UPDATE =====================
-task.spawn(function()
-    while not Library.Unloaded do
-        task.wait(0.1)
-        if Library.Flags.MenuToggleKey and Library.Flags.MenuToggleKey ~= Enum.KeyCode.Unknown then
-            Library.ToggleKey = Library.Flags.MenuToggleKey
-        end
-    end
-end)
-
--- ===================== INIT =====================
+-- ===================== INIT NOTIFICATION =====================
 task.spawn(function()
     task.wait(0.5)
-    
-    ConfigDropdown:Refresh(Library:GetConfigs())
-    
-    local autoLoad = Library:GetAutoLoad()
-    if autoLoad ~= "" then
-        AutoLoadLabel:Set("Auto-load: " .. autoLoad)
-    end
-    
-    if Library:DoAutoLoad() then
-        Library:Notify("Auto-loaded: " .. Library.AutoLoadConfig, 2, "Success")
-    end
-    
-    if Library.HideOnExecute then
-        Library.Toggled = false
-        MainFrame.Visible = false
-        Library:Notify("Press " .. Library.ToggleKey.Name .. " to open menu", 3)
-    else
-        Library:Notify("Avenir.CC v4.2 loaded!", 3, "Success")
-        Library:Notify("Press " .. Library.ToggleKey.Name .. " to toggle", 2)
-    end
+    Library:Notify("Azure UI v4.2 Loaded!", 3, "Success")
+    Library:Notify("Press RightShift to toggle", 2)
 end)
-
--- Cleanup on unload
-local originalUnload = Library.Unload
-Library.Unload = function(self)
-    if FOVCircle then
-        pcall(function()
-            FOVCircle:Remove()
-        end)
-    end
-    originalUnload(self)
-end
 
 return Library

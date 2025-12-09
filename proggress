@@ -1,0 +1,1954 @@
+
+--[[
+    ╔══════════════════════════════════════════════════════════════╗
+    ║                    RobloxUS UI Library                       ║
+    ║                   Discord: .gg/robloxus                      ║
+    ║                      Version 1.0.0                           ║
+    ╚══════════════════════════════════════════════════════════════╝
+]]
+
+local RobloxUS = {}
+RobloxUS.__index = RobloxUS
+
+--// Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+
+--// Theme Configuration
+RobloxUS.Theme = {
+    PrimaryDark = Color3.fromRGB(26, 26, 26),
+    SecondaryDark = Color3.fromRGB(31, 31, 31),
+    DarkGray = Color3.fromRGB(42, 42, 42),
+    InputBackground = Color3.fromRGB(37, 37, 37),
+    TextColor = Color3.fromRGB(224, 224, 224),
+    DimText = Color3.fromRGB(160, 160, 160),
+    AccentColor = Color3.fromRGB(77, 166, 255),
+    AccentHover = Color3.fromRGB(94, 179, 255),
+    StatusGreen = Color3.fromRGB(0, 255, 0),
+    StatusPurple = Color3.fromRGB(170, 0, 255),
+    NeonGreen = Color3.fromRGB(0, 255, 127),
+    Lavender = Color3.fromRGB(200, 180, 220),
+    Borders = Color3.fromRGB(64, 64, 64),
+    IconGray = Color3.fromRGB(136, 136, 136),
+    PlaceholderGray = Color3.fromRGB(119, 119, 119),
+    SliderTrack = Color3.fromRGB(58, 58, 58),
+    ButtonHover = Color3.fromRGB(51, 51, 51),
+    Shadow = Color3.fromRGB(0, 0, 0),
+}
+
+--// Utility Functions
+local Utility = {}
+
+function Utility:Create(instanceType, properties)
+    local instance = Instance.new(instanceType)
+    for property, value in pairs(properties or {}) do
+        if property ~= "Parent" then
+            instance[property] = value
+        end
+    end
+    if properties and properties.Parent then
+        instance.Parent = properties.Parent
+    end
+    return instance
+end
+
+function Utility:Tween(instance, properties, duration, easingStyle, easingDirection)
+    local tween = TweenService:Create(
+        instance,
+        TweenInfo.new(duration or 0.15, easingStyle or Enum.EasingStyle.Quad, easingDirection or Enum.EasingDirection.Out),
+        properties
+    )
+    tween:Play()
+    return tween
+end
+
+function Utility:AddCorner(instance, radius)
+    return Utility:Create("UICorner", {
+        CornerRadius = UDim.new(0, radius or 4),
+        Parent = instance
+    })
+end
+
+function Utility:AddStroke(instance, color, thickness, transparency)
+    return Utility:Create("UIStroke", {
+        Color = color or RobloxUS.Theme.Borders,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0,
+        Parent = instance
+    })
+end
+
+function Utility:AddPadding(instance, padding)
+    return Utility:Create("UIPadding", {
+        PaddingTop = UDim.new(0, padding),
+        PaddingBottom = UDim.new(0, padding),
+        PaddingLeft = UDim.new(0, padding),
+        PaddingRight = UDim.new(0, padding),
+        Parent = instance
+    })
+end
+
+function Utility:AddShadow(instance, size, transparency)
+    local shadow = Utility:Create("ImageLabel", {
+        Name = "Shadow",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0.5, 0, 0.5, 4),
+        Size = UDim2.new(1, size or 12, 1, size or 12),
+        ZIndex = instance.ZIndex - 1,
+        Image = "rbxassetid://6014261993",
+        ImageColor3 = RobloxUS.Theme.Shadow,
+        ImageTransparency = transparency or 0.6,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        Parent = instance
+    })
+    return shadow
+end
+
+function Utility:Ripple(button, x, y)
+    local ripple = Utility:Create("Frame", {
+        Name = "Ripple",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.7,
+        Position = UDim2.new(0, x, 0, y),
+        Size = UDim2.new(0, 0, 0, 0),
+        Parent = button
+    })
+    Utility:AddCorner(ripple, 100)
+    
+    local size = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2
+    Utility:Tween(ripple, {Size = UDim2.new(0, size, 0, size), BackgroundTransparency = 1}, 0.4)
+    
+    task.delay(0.4, function()
+        ripple:Destroy()
+    end)
+end
+
+--// Icon Definitions (Using Unicode/Text for compatibility)
+local Icons = {
+    Home = "🏠",
+    Settings = "⚙️",
+    Chart = "📊",
+    Config = "🔧",
+    Search = "🔍",
+    Close = "✕",
+    Copy = "📋",
+    Check = "✓",
+    Dropdown = "▼",
+    DropdownUp = "▲",
+}
+
+--// Main Library
+function RobloxUS:CreateWindow(config)
+    config = config or {}
+    local windowTitle = config.Title or ".gg/robloxus version"
+    local windowSize = config.Size or UDim2.new(0, 800, 0, 500)
+    local windowPosition = config.Position or UDim2.new(0.5, -400, 0.5, -250)
+    
+    local Window = {}
+    Window.Tabs = {}
+    Window.ActiveTab = nil
+    
+    --// ScreenGui
+    local ScreenGui = Utility:Create("ScreenGui", {
+        Name = "RobloxUS_UI",
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        ResetOnSpawn = false,
+    })
+    
+    -- Try to parent to CoreGui, fallback to PlayerGui
+    pcall(function()
+        ScreenGui.Parent = CoreGui
+    end)
+    if not ScreenGui.Parent then
+        ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+    end
+    
+    --// Main Window Container
+    local MainFrame = Utility:Create("Frame", {
+        Name = "MainFrame",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = RobloxUS.Theme.SecondaryDark,
+        BorderSizePixel = 0,
+        Position = windowPosition,
+        Size = windowSize,
+        ClipsDescendants = true,
+        Parent = ScreenGui
+    })
+    Utility:AddCorner(MainFrame, 8)
+    Utility:AddStroke(MainFrame, RobloxUS.Theme.Borders, 1)
+    Utility:AddShadow(MainFrame, 20, 0.4)
+    
+    --// Sky Gradient Background (Subtle effect)
+    local GradientOverlay = Utility:Create("Frame", {
+        Name = "GradientOverlay",
+        BackgroundColor3 = Color3.fromRGB(40, 60, 80),
+        BackgroundTransparency = 0.95,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 0,
+        Parent = MainFrame
+    })
+    
+    local Gradient = Utility:Create("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 100, 140)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 50, 70))
+        }),
+        Rotation = 90,
+        Parent = GradientOverlay
+    })
+    
+    --// Title Bar
+    local TitleBar = Utility:Create("Frame", {
+        Name = "TitleBar",
+        BackgroundColor3 = RobloxUS.Theme.PrimaryDark,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 32),
+        ZIndex = 10,
+        Parent = MainFrame
+    })
+    
+    local TitleBarCorner = Utility:Create("Frame", {
+        Name = "TitleBarCorner",
+        BackgroundColor3 = RobloxUS.Theme.PrimaryDark,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 1, -8),
+        Size = UDim2.new(1, 0, 0, 8),
+        ZIndex = 10,
+        Parent = TitleBar
+    })
+    
+    Utility:AddCorner(TitleBar, 8)
+    
+    --// Logo/Icon
+    local LogoIcon = Utility:Create("TextLabel", {
+        Name = "LogoIcon",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(0, 24, 1, 0),
+        Font = Enum.Font.GothamBold,
+        Text = "◆",
+        TextColor3 = RobloxUS.Theme.AccentColor,
+        TextSize = 16,
+        ZIndex = 11,
+        Parent = TitleBar
+    })
+    
+    --// Title Text
+    local TitleText = Utility:Create("TextLabel", {
+        Name = "TitleText",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 40, 0, 0),
+        Size = UDim2.new(0, 300, 1, 0),
+        Font = Enum.Font.GothamMedium,
+        Text = windowTitle,
+        TextColor3 = RobloxUS.Theme.TextColor,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 11,
+        Parent = TitleBar
+    })
+    
+    --// Close Button
+    local CloseButton = Utility:Create("TextButton", {
+        Name = "CloseButton",
+        BackgroundColor3 = RobloxUS.Theme.DarkGray,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -32, 0, 4),
+        Size = UDim2.new(0, 24, 0, 24),
+        Font = Enum.Font.GothamBold,
+        Text = "✕",
+        TextColor3 = RobloxUS.Theme.IconGray,
+        TextSize = 14,
+        ZIndex = 11,
+        Parent = TitleBar
+    })
+    Utility:AddCorner(CloseButton, 4)
+    
+    CloseButton.MouseEnter:Connect(function()
+        Utility:Tween(CloseButton, {BackgroundTransparency = 0, TextColor3 = Color3.fromRGB(255, 100, 100)}, 0.15)
+    end)
+    
+    CloseButton.MouseLeave:Connect(function()
+        Utility:Tween(CloseButton, {BackgroundTransparency = 1, TextColor3 = RobloxUS.Theme.IconGray}, 0.15)
+    end)
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        Utility:Tween(MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+        task.delay(0.3, function()
+            ScreenGui:Destroy()
+        end)
+    end)
+    
+    --// Left Sidebar (125px)
+    local Sidebar = Utility:Create("Frame", {
+        Name = "Sidebar",
+        BackgroundColor3 = RobloxUS.Theme.PrimaryDark,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 32),
+        Size = UDim2.new(0, 50, 1, -32),
+        ZIndex = 5,
+        Parent = MainFrame
+    })
+    
+    local SidebarList = Utility:Create("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = Sidebar
+    })
+    
+    local SidebarPadding = Utility:Create("UIPadding", {
+        PaddingTop = UDim.new(0, 12),
+        Parent = Sidebar
+    })
+    
+    --// Sidebar Icons
+    local sidebarIcons = {"🏠", "⚙️", "📊", "🔧"}
+    for i, icon in ipairs(sidebarIcons) do
+        local IconButton = Utility:Create("TextButton", {
+            Name = "SidebarIcon_" .. i,
+            BackgroundColor3 = RobloxUS.Theme.DarkGray,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 36, 0, 36),
+            Font = Enum.Font.GothamMedium,
+            Text = icon,
+            TextColor3 = RobloxUS.Theme.IconGray,
+            TextSize = 18,
+            LayoutOrder = i,
+            ZIndex = 6,
+            Parent = Sidebar
+        })
+        Utility:AddCorner(IconButton, 6)
+        
+        IconButton.MouseEnter:Connect(function()
+            Utility:Tween(IconButton, {BackgroundTransparency = 0, TextColor3 = RobloxUS.Theme.TextColor}, 0.15)
+        end)
+        
+        IconButton.MouseLeave:Connect(function()
+            Utility:Tween(IconButton, {BackgroundTransparency = 1, TextColor3 = RobloxUS.Theme.IconGray}, 0.15)
+        end)
+    end
+    
+    --// Content Container (Right of Sidebar)
+    local ContentContainer = Utility:Create("Frame", {
+        Name = "ContentContainer",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 50, 0, 32),
+        Size = UDim2.new(1, -50, 1, -32),
+        ZIndex = 2,
+        Parent = MainFrame
+    })
+    
+    --// Search Bar
+    local SearchContainer = Utility:Create("Frame", {
+        Name = "SearchContainer",
+        BackgroundColor3 = RobloxUS.Theme.DarkGray,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 12, 0, 8),
+        Size = UDim2.new(1, -24, 0, 32),
+        ZIndex = 3,
+        Parent = ContentContainer
+    })
+    Utility:AddCorner(SearchContainer, 6)
+    Utility:AddStroke(SearchContainer, RobloxUS.Theme.Borders, 1)
+    
+    local SearchIcon = Utility:Create("TextLabel", {
+        Name = "SearchIcon",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(0, 20, 1, 0),
+        Font = Enum.Font.GothamMedium,
+        Text = "🔍",
+        TextColor3 = RobloxUS.Theme.PlaceholderGray,
+        TextSize = 14,
+        ZIndex = 4,
+        Parent = SearchContainer
+    })
+    
+    local SearchInput = Utility:Create("TextBox", {
+        Name = "SearchInput",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 35, 0, 0),
+        Size = UDim2.new(1, -45, 1, 0),
+        Font = Enum.Font.Gotham,
+        PlaceholderText = "Search..",
+        PlaceholderColor3 = RobloxUS.Theme.PlaceholderGray,
+        Text = "",
+        TextColor3 = RobloxUS.Theme.TextColor,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 4,
+        Parent = SearchContainer
+    })
+    
+    --// Main Content Area (Two Columns)
+    local MainContent = Utility:Create("Frame", {
+        Name = "MainContent",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 48),
+        Size = UDim2.new(1, -24, 1, -56),
+        ZIndex = 2,
+        Parent = ContentContainer
+    })
+    
+    --// Columns Layout
+    local ColumnsLayout = Utility:Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 12),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = MainContent
+    })
+    
+    --// Dragging Functionality
+    local dragging, dragInput, dragStart, startPos
+    
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    --// Section Creation Function
+    function Window:CreateSection(config)
+        config = config or {}
+        local sectionTitle = config.Title or "Section"
+        local sectionSide = config.Side or "Left"
+        local sectionWidth = config.Width or (sectionSide == "Left" and 0.48 or 0.50)
+        
+        local Section = {}
+        Section.Elements = {}
+        
+        --// Section Frame
+        local SectionFrame = Utility:Create("ScrollingFrame", {
+            Name = sectionTitle .. "_Section",
+            BackgroundColor3 = RobloxUS.Theme.SecondaryDark,
+            BorderSizePixel = 0,
+            Size = UDim2.new(sectionWidth, -6, 1, 0),
+            LayoutOrder = sectionSide == "Left" and 1 or 2,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = RobloxUS.Theme.AccentColor,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ZIndex = 3,
+            Parent = MainContent
+        })
+        Utility:AddCorner(SectionFrame, 6)
+        Utility:AddStroke(SectionFrame, RobloxUS.Theme.Borders, 1)
+        
+        --// Section Header
+        local SectionHeader = Utility:Create("Frame", {
+            Name = "Header",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 32),
+            ZIndex = 4,
+            Parent = SectionFrame
+        })
+        
+        local SectionTitleLabel = Utility:Create("TextLabel", {
+            Name = "Title",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 12, 0, 0),
+            Size = UDim2.new(1, -50, 1, 0),
+            Font = Enum.Font.GothamBold,
+            Text = sectionTitle,
+            TextColor3 = RobloxUS.Theme.TextColor,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 5,
+            Parent = SectionHeader
+        })
+        
+        local SettingsButton = Utility:Create("TextButton", {
+            Name = "SettingsBtn",
+            BackgroundColor3 = RobloxUS.Theme.DarkGray,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(1, -32, 0, 4),
+            Size = UDim2.new(0, 24, 0, 24),
+            Font = Enum.Font.GothamMedium,
+            Text = "⚙️",
+            TextColor3 = RobloxUS.Theme.IconGray,
+            TextSize = 14,
+            ZIndex = 5,
+            Parent = SectionHeader
+        })
+        
+        --// Elements Container
+        local ElementsContainer = Utility:Create("Frame", {
+            Name = "Elements",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, 36),
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            ZIndex = 4,
+            Parent = SectionFrame
+        })
+        
+        local ElementsLayout = Utility:Create("UIListLayout", {
+            Padding = UDim.new(0, 8),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = ElementsContainer
+        })
+        
+        local ElementsPadding = Utility:Create("UIPadding", {
+            PaddingLeft = UDim.new(0, 12),
+            PaddingRight = UDim.new(0, 12),
+            PaddingBottom = UDim.new(0, 12),
+            Parent = ElementsContainer
+        })
+        
+        --// MultiSection Top Icons (if MultiSection)
+        if config.MultiSection then
+            local IconRow = Utility:Create("Frame", {
+                Name = "IconRow",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 32),
+                LayoutOrder = 0,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local IconRowLayout = Utility:Create("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 6),
+                HorizontalAlignment = Enum.HorizontalAlignment.Left,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = IconRow
+            })
+            
+            local multiIcons = {"⚙️", "🔧", "📊", "🎨", "📁"}
+            for i, icon in ipairs(multiIcons) do
+                local IconBtn = Utility:Create("TextButton", {
+                    Name = "MultiIcon_" .. i,
+                    BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                    Size = UDim2.new(0, 28, 0, 28),
+                    Font = Enum.Font.GothamMedium,
+                    Text = icon,
+                    TextColor3 = RobloxUS.Theme.IconGray,
+                    TextSize = 14,
+                    LayoutOrder = i,
+                    ZIndex = 6,
+                    Parent = IconRow
+                })
+                Utility:AddCorner(IconBtn, 14)
+                
+                IconBtn.MouseEnter:Connect(function()
+                    Utility:Tween(IconBtn, {BackgroundColor3 = RobloxUS.Theme.AccentColor, TextColor3 = RobloxUS.Theme.TextColor}, 0.15)
+                end)
+                
+                IconBtn.MouseLeave:Connect(function()
+                    Utility:Tween(IconBtn, {BackgroundColor3 = RobloxUS.Theme.DarkGray, TextColor3 = RobloxUS.Theme.IconGray}, 0.15)
+                end)
+            end
+        end
+        
+        --// Toggle Element
+        function Section:AddToggle(config)
+            config = config or {}
+            local toggleName = config.Name or "Toggle"
+            local toggleDefault = config.Default or false
+            local toggleCallback = config.Callback or function() end
+            
+            local Toggle = {Value = toggleDefault}
+            
+            local ToggleFrame = Utility:Create("Frame", {
+                Name = toggleName .. "_Toggle",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 28),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local ToggleLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0.7, 0, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = toggleName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = ToggleFrame
+            })
+            
+            local ToggleButton = Utility:Create("TextButton", {
+                Name = "ToggleBtn",
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundColor3 = toggleDefault and RobloxUS.Theme.AccentColor or RobloxUS.Theme.DarkGray,
+                Position = UDim2.new(1, 0, 0.5, 0),
+                Size = UDim2.new(0, 40, 0, 20),
+                Text = "",
+                ZIndex = 6,
+                Parent = ToggleFrame
+            })
+            Utility:AddCorner(ToggleButton, 10)
+            Utility:AddStroke(ToggleButton, RobloxUS.Theme.Borders, 1)
+            
+            local ToggleCircle = Utility:Create("Frame", {
+                Name = "Circle",
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundColor3 = RobloxUS.Theme.TextColor,
+                Position = toggleDefault and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+                Size = UDim2.new(0, 16, 0, 16),
+                ZIndex = 7,
+                Parent = ToggleButton
+            })
+            Utility:AddCorner(ToggleCircle, 8)
+            
+            local function UpdateToggle()
+                if Toggle.Value then
+                    Utility:Tween(ToggleButton, {BackgroundColor3 = RobloxUS.Theme.AccentColor}, 0.2)
+                    Utility:Tween(ToggleCircle, {Position = UDim2.new(1, -18, 0.5, 0)}, 0.2)
+                else
+                    Utility:Tween(ToggleButton, {BackgroundColor3 = RobloxUS.Theme.DarkGray}, 0.2)
+                    Utility:Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, 0)}, 0.2)
+                end
+                toggleCallback(Toggle.Value)
+            end
+            
+            ToggleButton.MouseButton1Click:Connect(function()
+                Toggle.Value = not Toggle.Value
+                UpdateToggle()
+            end)
+            
+            function Toggle:Set(value)
+                Toggle.Value = value
+                UpdateToggle()
+            end
+            
+            table.insert(Section.Elements, Toggle)
+            return Toggle
+        end
+        
+        --// Slider Element
+        function Section:AddSlider(config)
+            config = config or {}
+            local sliderName = config.Name or "Slider"
+            local sliderMin = config.Min or 0
+            local sliderMax = config.Max or 1
+            local sliderDefault = config.Default or sliderMin
+            local sliderSuffix = config.Suffix or ""
+            local sliderDecimals = config.Decimals or 2
+            local sliderCallback = config.Callback or function() end
+            
+            local Slider = {Value = sliderDefault}
+            
+            local SliderFrame = Utility:Create("Frame", {
+                Name = sliderName .. "_Slider",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 38),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local SliderLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0.5, 0, 0, 16),
+                Font = Enum.Font.Gotham,
+                Text = sliderName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = SliderFrame
+            })
+            
+            local SliderValue = Utility:Create("TextLabel", {
+                Name = "Value",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0.5, 0, 0, 0),
+                Size = UDim2.new(0.5, 0, 0, 16),
+                Font = Enum.Font.GothamMedium,
+                Text = string.format("%." .. sliderDecimals .. "f", sliderDefault) .. sliderSuffix,
+                TextColor3 = RobloxUS.Theme.AccentColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Right,
+                ZIndex = 6,
+                Parent = SliderFrame
+            })
+            
+            local SliderTrack = Utility:Create("Frame", {
+                Name = "Track",
+                BackgroundColor3 = RobloxUS.Theme.SliderTrack,
+                Position = UDim2.new(0, 0, 0, 22),
+                Size = UDim2.new(1, 0, 0, 6),
+                ZIndex = 6,
+                Parent = SliderFrame
+            })
+            Utility:AddCorner(SliderTrack, 3)
+            
+            local initialFill = (sliderDefault - sliderMin) / (sliderMax - sliderMin)
+            local SliderFill = Utility:Create("Frame", {
+                Name = "Fill",
+                BackgroundColor3 = RobloxUS.Theme.AccentColor,
+                Size = UDim2.new(initialFill, 0, 1, 0),
+                ZIndex = 7,
+                Parent = SliderTrack
+            })
+            Utility:AddCorner(SliderFill, 3)
+            
+            local SliderThumb = Utility:Create("Frame", {
+                Name = "Thumb",
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundColor3 = RobloxUS.Theme.AccentColor,
+                Position = UDim2.new(initialFill, 0, 0.5, 0),
+                Size = UDim2.new(0, 14, 0, 14),
+                ZIndex = 8,
+                Parent = SliderTrack
+            })
+            Utility:AddCorner(SliderThumb, 7)
+            Utility:AddStroke(SliderThumb, RobloxUS.Theme.TextColor, 2)
+            
+            local sliding = false
+            
+            local function UpdateSlider(input)
+                local pos = math.clamp((input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X, 0, 1)
+                Slider.Value = sliderMin + (sliderMax - sliderMin) * pos
+                
+                SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+                SliderThumb.Position = UDim2.new(pos, 0, 0.5, 0)
+                SliderValue.Text = string.format("%." .. sliderDecimals .. "f", Slider.Value) .. sliderSuffix
+                
+                sliderCallback(Slider.Value)
+            end
+            
+            SliderTrack.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    sliding = true
+                    UpdateSlider(input)
+                end
+            end)
+            
+            UserInputService.InputChanged:Connect(function(input)
+                if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    UpdateSlider(input)
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    sliding = false
+                end
+            end)
+            
+            function Slider:Set(value)
+                Slider.Value = math.clamp(value, sliderMin, sliderMax)
+                local pos = (Slider.Value - sliderMin) / (sliderMax - sliderMin)
+                SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+                SliderThumb.Position = UDim2.new(pos, 0, 0.5, 0)
+                SliderValue.Text = string.format("%." .. sliderDecimals .. "f", Slider.Value) .. sliderSuffix
+                sliderCallback(Slider.Value)
+            end
+            
+            table.insert(Section.Elements, Slider)
+            return Slider
+        end
+        
+        --// Dropdown Element
+        function Section:AddDropdown(config)
+            config = config or {}
+            local dropdownName = config.Name or "Dropdown"
+            local dropdownOptions = config.Options or {"Option 1", "Option 2", "Option 3"}
+            local dropdownDefault = config.Default or dropdownOptions[1]
+            local dropdownCallback = config.Callback or function() end
+            
+            local Dropdown = {Value = dropdownDefault, Open = false}
+            
+            local DropdownFrame = Utility:Create("Frame", {
+                Name = dropdownName .. "_Dropdown",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 52),
+                ClipsDescendants = false,
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 10,
+                Parent = ElementsContainer
+            })
+            
+            local DropdownLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 16),
+                Font = Enum.Font.Gotham,
+                Text = dropdownName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 11,
+                Parent = DropdownFrame
+            })
+            
+            local DropdownButton = Utility:Create("TextButton", {
+                Name = "Button",
+                BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                Position = UDim2.new(0, 0, 0, 20),
+                Size = UDim2.new(1, 0, 0, 28),
+                Font = Enum.Font.Gotham,
+                Text = "",
+                ZIndex = 11,
+                Parent = DropdownFrame
+            })
+            Utility:AddCorner(DropdownButton, 4)
+            Utility:AddStroke(DropdownButton, RobloxUS.Theme.Borders, 1)
+            
+            local DropdownSelected = Utility:Create("TextLabel", {
+                Name = "Selected",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 0),
+                Size = UDim2.new(1, -60, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = dropdownDefault,
+                TextColor3 = RobloxUS.Theme.DimText,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 12,
+                Parent = DropdownButton
+            })
+            
+            local DropdownArrow = Utility:Create("TextLabel", {
+                Name = "Arrow",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, -30, 0, 0),
+                Size = UDim2.new(0, 20, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = "▼",
+                TextColor3 = RobloxUS.Theme.IconGray,
+                TextSize = 10,
+                ZIndex = 12,
+                Parent = DropdownButton
+            })
+            
+            local CopyButton = Utility:Create("TextButton", {
+                Name = "CopyBtn",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, -50, 0, 0),
+                Size = UDim2.new(0, 20, 1, 0),
+                Font = Enum.Font.GothamMedium,
+                Text = "📋",
+                TextColor3 = RobloxUS.Theme.IconGray,
+                TextSize = 12,
+                ZIndex = 12,
+                Parent = DropdownButton
+            })
+            
+            CopyButton.MouseButton1Click:Connect(function()
+                if setclipboard then
+                    setclipboard(Dropdown.Value)
+                end
+            end)
+            
+            local DropdownList = Utility:Create("Frame", {
+                Name = "List",
+                BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                Position = UDim2.new(0, 0, 0, 52),
+                Size = UDim2.new(1, 0, 0, 0),
+                ClipsDescendants = true,
+                Visible = false,
+                ZIndex = 20,
+                Parent = DropdownFrame
+            })
+            Utility:AddCorner(DropdownList, 4)
+            Utility:AddStroke(DropdownList, RobloxUS.Theme.Borders, 1)
+            
+            local ListLayout = Utility:Create("UIListLayout", {
+                Padding = UDim.new(0, 2),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = DropdownList
+            })
+            
+            local ListPadding = Utility:Create("UIPadding", {
+                PaddingTop = UDim.new(0, 4),
+                PaddingBottom = UDim.new(0, 4),
+                PaddingLeft = UDim.new(0, 4),
+                PaddingRight = UDim.new(0, 4),
+                Parent = DropdownList
+            })
+            
+            local function CreateOption(optionText)
+                local OptionButton = Utility:Create("TextButton", {
+                    Name = optionText,
+                    BackgroundColor3 = RobloxUS.Theme.InputBackground,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 24),
+                    Font = Enum.Font.Gotham,
+                    Text = optionText,
+                    TextColor3 = RobloxUS.Theme.DimText,
+                    TextSize = 11,
+                    ZIndex = 21,
+                    Parent = DropdownList
+                })
+                Utility:AddCorner(OptionButton, 3)
+                
+                OptionButton.MouseEnter:Connect(function()
+                    Utility:Tween(OptionButton, {BackgroundTransparency = 0, TextColor3 = RobloxUS.Theme.TextColor}, 0.1)
+                end)
+                
+                OptionButton.MouseLeave:Connect(function()
+                    Utility:Tween(OptionButton, {BackgroundTransparency = 1, TextColor3 = RobloxUS.Theme.DimText}, 0.1)
+                end)
+                
+                OptionButton.MouseButton1Click:Connect(function()
+                    Dropdown.Value = optionText
+                    DropdownSelected.Text = optionText
+                    Dropdown.Open = false
+                    DropdownList.Visible = false
+                    Utility:Tween(DropdownList, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
+                    Utility:Tween(DropdownArrow, {Rotation = 0}, 0.15)
+                    dropdownCallback(optionText)
+                end)
+                
+                return OptionButton
+            end
+            
+            for _, option in ipairs(dropdownOptions) do
+                CreateOption(option)
+            end
+            
+            DropdownButton.MouseButton1Click:Connect(function()
+                Dropdown.Open = not Dropdown.Open
+                if Dropdown.Open then
+                    DropdownList.Visible = true
+                    local listHeight = (#dropdownOptions * 26) + 8
+                    Utility:Tween(DropdownList, {Size = UDim2.new(1, 0, 0, math.min(listHeight, 150))}, 0.2)
+                    Utility:Tween(DropdownArrow, {Rotation = 180}, 0.15)
+                else
+                    Utility:Tween(DropdownList, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
+                    Utility:Tween(DropdownArrow, {Rotation = 0}, 0.15)
+                    task.delay(0.15, function()
+                        DropdownList.Visible = false
+                    end)
+                end
+            end)
+            
+            function Dropdown:Set(value)
+                if table.find(dropdownOptions, value) then
+                    Dropdown.Value = value
+                    DropdownSelected.Text = value
+                    dropdownCallback(value)
+                end
+            end
+            
+            function Dropdown:Refresh(newOptions, keepValue)
+                for _, child in ipairs(DropdownList:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        child:Destroy()
+                    end
+                end
+                dropdownOptions = newOptions
+                for _, option in ipairs(newOptions) do
+                    CreateOption(option)
+                end
+                if not keepValue or not table.find(newOptions, Dropdown.Value) then
+                    Dropdown.Value = newOptions[1] or ""
+                    DropdownSelected.Text = Dropdown.Value
+                end
+            end
+            
+            table.insert(Section.Elements, Dropdown)
+            return Dropdown
+        end
+        
+        --// Label Element
+        function Section:AddLabel(config)
+            config = config or {}
+            local labelText = config.Text or "Text label"
+            
+            local Label = {Text = labelText}
+            
+            local LabelFrame = Utility:Create("Frame", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 20),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local LabelText = Utility:Create("TextLabel", {
+                Name = "Text",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = labelText,
+                TextColor3 = RobloxUS.Theme.DimText,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = LabelFrame
+            })
+            
+            function Label:Set(text)
+                Label.Text = text
+                LabelText.Text = text
+            end
+            
+            table.insert(Section.Elements, Label)
+            return Label
+        end
+        
+        --// Colorpicker Element
+        function Section:AddColorpicker(config)
+            config = config or {}
+            local colorName = config.Name or "Colorpicker"
+            local colorDefault = config.Default or Color3.fromRGB(255, 255, 255)
+            local colorSecondary = config.Secondary or Color3.fromRGB(0, 255, 127)
+            local colorCallback = config.Callback or function() end
+            
+            local Colorpicker = {
+                Value = colorDefault,
+                Secondary = colorSecondary
+            }
+            
+            local ColorFrame = Utility:Create("Frame", {
+                Name = colorName .. "_Colorpicker",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 28),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local ColorLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0.5, 0, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = colorName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = ColorFrame
+            })
+            
+            local ColorContainer = Utility:Create("Frame", {
+                Name = "Colors",
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, 0, 0.5, 0),
+                Size = UDim2.new(0, 56, 0, 24),
+                ZIndex = 6,
+                Parent = ColorFrame
+            })
+            
+            local ColorLayout = Utility:Create("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 4),
+                HorizontalAlignment = Enum.HorizontalAlignment.Right,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = ColorContainer
+            })
+            
+            local PrimaryColorBtn = Utility:Create("TextButton", {
+                Name = "Primary",
+                BackgroundColor3 = colorDefault,
+                Size = UDim2.new(0, 24, 0, 24),
+                Text = "",
+                LayoutOrder = 1,
+                ZIndex = 7,
+                Parent = ColorContainer
+            })
+            Utility:AddCorner(PrimaryColorBtn, 4)
+            Utility:AddStroke(PrimaryColorBtn, RobloxUS.Theme.Borders, 1)
+            
+            local SecondaryColorBtn = Utility:Create("TextButton", {
+                Name = "Secondary",
+                BackgroundColor3 = colorSecondary,
+                Size = UDim2.new(0, 24, 0, 24),
+                Text = "",
+                LayoutOrder = 2,
+                ZIndex = 7,
+                Parent = ColorContainer
+            })
+            Utility:AddCorner(SecondaryColorBtn, 4)
+            Utility:AddStroke(SecondaryColorBtn, RobloxUS.Theme.Borders, 1)
+            
+            -- Color picker popup (simplified)
+            local function CreateColorPopup(button, isPrimary)
+                local existingPopup = MainFrame:FindFirstChild("ColorPopup")
+                if existingPopup then existingPopup:Destroy() end
+                
+                local ColorPopup = Utility:Create("Frame", {
+                    Name = "ColorPopup",
+                    BackgroundColor3 = RobloxUS.Theme.SecondaryDark,
+                    Position = UDim2.new(0, button.AbsolutePosition.X - MainFrame.AbsolutePosition.X, 0, button.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + 30),
+                    Size = UDim2.new(0, 200, 0, 150),
+                    ZIndex = 100,
+                    Parent = MainFrame
+                })
+                Utility:AddCorner(ColorPopup, 6)
+                Utility:AddStroke(ColorPopup, RobloxUS.Theme.Borders, 1)
+                
+                local ColorGradient = Utility:Create("ImageButton", {
+                    Name = "Gradient",
+                    BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+                    Position = UDim2.new(0, 10, 0, 10),
+                    Size = UDim2.new(0, 150, 0, 100),
+                    ZIndex = 101,
+                    Parent = ColorPopup
+                })
+                Utility:AddCorner(ColorGradient, 4)
+                
+                local WhiteGradient = Utility:Create("UIGradient", {
+                    Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+                    }),
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0),
+                        NumberSequenceKeypoint.new(1, 1)
+                    }),
+                    Parent = ColorGradient
+                })
+                
+                local BlackOverlay = Utility:Create("Frame", {
+                    Name = "BlackOverlay",
+                    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                    BackgroundTransparency = 0,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    ZIndex = 102,
+                    Parent = ColorGradient
+                })
+                Utility:AddCorner(BlackOverlay, 4)
+                
+                local BlackGradient = Utility:Create("UIGradient", {
+                    Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+                    }),
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(1, 0)
+                    }),
+                    Rotation = 90,
+                    Parent = BlackOverlay
+                })
+                
+                local HueSlider = Utility:Create("Frame", {
+                    Name = "HueSlider",
+                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                    Position = UDim2.new(0, 170, 0, 10),
+                    Size = UDim2.new(0, 20, 0, 100),
+                    ZIndex = 101,
+                    Parent = ColorPopup
+                })
+                Utility:AddCorner(HueSlider, 4)
+                
+                local HueGradient = Utility:Create("UIGradient", {
+                    Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+                        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+                        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+                    }),
+                    Rotation = 90,
+                    Parent = HueSlider
+                })
+                
+                local CloseBtn = Utility:Create("TextButton", {
+                    Name = "Close",
+                    BackgroundColor3 = RobloxUS.Theme.AccentColor,
+                    Position = UDim2.new(0, 10, 0, 120),
+                    Size = UDim2.new(0, 180, 0, 24),
+                    Font = Enum.Font.GothamMedium,
+                    Text = "Apply",
+                    TextColor3 = RobloxUS.Theme.TextColor,
+                    TextSize = 11,
+                    ZIndex = 101,
+                    Parent = ColorPopup
+                })
+                Utility:AddCorner(CloseBtn, 4)
+                
+                local h, s, v = 0, 1, 1
+                local picking = false
+                local hueSliding = false
+                
+                local function UpdateColor()
+                    local newColor = Color3.fromHSV(h, s, v)
+                    if isPrimary then
+                        Colorpicker.Value = newColor
+                        PrimaryColorBtn.BackgroundColor3 = newColor
+                    else
+                        Colorpicker.Secondary = newColor
+                        SecondaryColorBtn.BackgroundColor3 = newColor
+                    end
+                    ColorGradient.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                    colorCallback(Colorpicker.Value, Colorpicker.Secondary)
+                end
+                
+                ColorGradient.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        picking = true
+                    end
+                end)
+                
+                HueSlider.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        hueSliding = true
+                    end
+                end)
+                
+                UserInputService.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if picking then
+                            s = math.clamp((input.Position.X - ColorGradient.AbsolutePosition.X) / ColorGradient.AbsoluteSize.X, 0, 1)
+                            v = 1 - math.clamp((input.Position.Y - ColorGradient.AbsolutePosition.Y) / ColorGradient.AbsoluteSize.Y, 0, 1)
+                            UpdateColor()
+                        elseif hueSliding then
+                            h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1)
+                            UpdateColor()
+                        end
+                    end
+                end)
+                
+                UserInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        picking = false
+                        hueSliding = false
+                    end
+                end)
+                
+                CloseBtn.MouseButton1Click:Connect(function()
+                    ColorPopup:Destroy()
+                end)
+            end
+            
+            PrimaryColorBtn.MouseButton1Click:Connect(function()
+                CreateColorPopup(PrimaryColorBtn, true)
+            end)
+            
+            SecondaryColorBtn.MouseButton1Click:Connect(function()
+                CreateColorPopup(SecondaryColorBtn, false)
+            end)
+            
+            function Colorpicker:Set(primary, secondary)
+                if primary then
+                    Colorpicker.Value = primary
+                    PrimaryColorBtn.BackgroundColor3 = primary
+                end
+                if secondary then
+                    Colorpicker.Secondary = secondary
+                    SecondaryColorBtn.BackgroundColor3 = secondary
+                end
+                colorCallback(Colorpicker.Value, Colorpicker.Secondary)
+            end
+            
+            table.insert(Section.Elements, Colorpicker)
+            return Colorpicker
+        end
+        
+        --// Keybind Element
+        function Section:AddKeybind(config)
+            config = config or {}
+            local keybindName = config.Name or "Keybinds"
+            local keybindDefault = config.Default or Enum.KeyCode.LeftShift
+            local keybindCallback = config.Callback or function() end
+            local keybindChangedCallback = config.ChangedCallback or function() end
+            
+            local Keybind = {Value = keybindDefault, Listening = false}
+            
+            local KeybindFrame = Utility:Create("Frame", {
+                Name = keybindName .. "_Keybind",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 28),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local KeybindLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0.5, 0, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = keybindName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = KeybindFrame
+            })
+            
+            local KeybindButton = Utility:Create("TextButton", {
+                Name = "KeyBtn",
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                Position = UDim2.new(1, 0, 0.5, 0),
+                Size = UDim2.new(0, 80, 0, 24),
+                Font = Enum.Font.GothamMedium,
+                Text = keybindDefault.Name,
+                TextColor3 = RobloxUS.Theme.AccentColor,
+                TextSize = 11,
+                ZIndex = 6,
+                Parent = KeybindFrame
+            })
+            Utility:AddCorner(KeybindButton, 4)
+            Utility:AddStroke(KeybindButton, RobloxUS.Theme.Borders, 1)
+            
+            KeybindButton.MouseButton1Click:Connect(function()
+                Keybind.Listening = true
+                KeybindButton.Text = "..."
+                Utility:Tween(KeybindButton, {BackgroundColor3 = RobloxUS.Theme.AccentColor}, 0.15)
+            end)
+            
+            UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                if Keybind.Listening then
+                    if input.UserInputType == Enum.UserInputType.Keyboard then
+                        Keybind.Value = input.KeyCode
+                        KeybindButton.Text = input.KeyCode.Name
+                        Keybind.Listening = false
+                        Utility:Tween(KeybindButton, {BackgroundColor3 = RobloxUS.Theme.DarkGray}, 0.15)
+                        keybindChangedCallback(input.KeyCode)
+                    end
+                elseif input.KeyCode == Keybind.Value and not gameProcessed then
+                    keybindCallback(Keybind.Value)
+                end
+            end)
+            
+            function Keybind:Set(keyCode)
+                Keybind.Value = keyCode
+                KeybindButton.Text = keyCode.Name
+                keybindChangedCallback(keyCode)
+            end
+            
+            table.insert(Section.Elements, Keybind)
+            return Keybind
+        end
+        
+        --// Textbox Element
+        function Section:AddTextbox(config)
+            config = config or {}
+            local textboxName = config.Name or "Textbox"
+            local textboxDefault = config.Default or ""
+            local textboxPlaceholder = config.Placeholder or "Placeholder text"
+            local textboxCallback = config.Callback or function() end
+            
+            local Textbox = {Value = textboxDefault}
+            
+            local TextboxFrame = Utility:Create("Frame", {
+                Name = textboxName .. "_Textbox",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 52),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local TextboxLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 16),
+                Font = Enum.Font.Gotham,
+                Text = textboxName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = TextboxFrame
+            })
+            
+            local TextboxInput = Utility:Create("TextBox", {
+                Name = "Input",
+                BackgroundColor3 = RobloxUS.Theme.InputBackground,
+                Position = UDim2.new(0, 0, 0, 20),
+                Size = UDim2.new(1, 0, 0, 28),
+                Font = Enum.Font.Gotham,
+                PlaceholderText = textboxPlaceholder,
+                PlaceholderColor3 = RobloxUS.Theme.PlaceholderGray,
+                Text = textboxDefault,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ClearTextOnFocus = false,
+                ZIndex = 6,
+                Parent = TextboxFrame
+            })
+            Utility:AddCorner(TextboxInput, 4)
+            Utility:AddStroke(TextboxInput, RobloxUS.Theme.Borders, 1)
+            Utility:AddPadding(TextboxInput, 8)
+            
+            TextboxInput.Focused:Connect(function()
+                Utility:Tween(TextboxInput, {BackgroundColor3 = RobloxUS.Theme.DarkGray}, 0.15)
+                Utility:Tween(TextboxInput.UIStroke, {Color = RobloxUS.Theme.AccentColor}, 0.15)
+            end)
+            
+            TextboxInput.FocusLost:Connect(function(enterPressed)
+                Textbox.Value = TextboxInput.Text
+                Utility:Tween(TextboxInput, {BackgroundColor3 = RobloxUS.Theme.InputBackground}, 0.15)
+                Utility:Tween(TextboxInput.UIStroke, {Color = RobloxUS.Theme.Borders}, 0.15)
+                textboxCallback(TextboxInput.Text, enterPressed)
+            end)
+            
+            function Textbox:Set(text)
+                Textbox.Value = text
+                TextboxInput.Text = text
+            end
+            
+            table.insert(Section.Elements, Textbox)
+            return Textbox
+        end
+        
+        --// Button Element
+        function Section:AddButton(config)
+            config = config or {}
+            local buttonName = config.Name or "Button"
+            local buttonCallback = config.Callback or function() end
+            
+            local Button = {}
+            
+            local ButtonFrame = Utility:Create("TextButton", {
+                Name = buttonName .. "_Button",
+                BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                Size = UDim2.new(1, 0, 0, 28),
+                Font = Enum.Font.GothamMedium,
+                Text = buttonName,
+                TextColor3 = RobloxUS.Theme.DimText,
+                TextSize = 12,
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                ClipsDescendants = true,
+                Parent = ElementsContainer
+            })
+            Utility:AddCorner(ButtonFrame, 4)
+            Utility:AddStroke(ButtonFrame, RobloxUS.Theme.Borders, 1)
+            
+            ButtonFrame.MouseEnter:Connect(function()
+                Utility:Tween(ButtonFrame, {BackgroundColor3 = RobloxUS.Theme.ButtonHover, TextColor3 = RobloxUS.Theme.TextColor}, 0.15)
+            end)
+            
+            ButtonFrame.MouseLeave:Connect(function()
+                Utility:Tween(ButtonFrame, {BackgroundColor3 = RobloxUS.Theme.DarkGray, TextColor3 = RobloxUS.Theme.DimText}, 0.15)
+            end)
+            
+            ButtonFrame.MouseButton1Click:Connect(function()
+                local x = Mouse.X - ButtonFrame.AbsolutePosition.X
+                local y = Mouse.Y - ButtonFrame.AbsolutePosition.Y
+                Utility:Ripple(ButtonFrame, x, y)
+                buttonCallback()
+            end)
+            
+            table.insert(Section.Elements, Button)
+            return Button
+        end
+        
+        --// Button Row Element (Two buttons side by side)
+        function Section:AddButtonRow(config)
+            config = config or {}
+            local button1Name = config.Button1 or "Button"
+            local button2Name = config.Button2 or "Button"
+            local button1Callback = config.Callback1 or function() end
+            local button2Callback = config.Callback2 or function() end
+            
+            local ButtonRow = {}
+            
+            local ButtonRowFrame = Utility:Create("Frame", {
+                Name = "ButtonRow",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 28),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local RowLayout = Utility:Create("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 8),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = ButtonRowFrame
+            })
+            
+            local function CreateRowButton(name, callback, order)
+                local Btn = Utility:Create("TextButton", {
+                    Name = name,
+                    BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                    Size = UDim2.new(0.5, -4, 1, 0),
+                    Font = Enum.Font.GothamMedium,
+                    Text = name,
+                    TextColor3 = RobloxUS.Theme.DimText,
+                    TextSize = 11,
+                    LayoutOrder = order,
+                    ZIndex = 6,
+                    ClipsDescendants = true,
+                    Parent = ButtonRowFrame
+                })
+                Utility:AddCorner(Btn, 4)
+                Utility:AddStroke(Btn, RobloxUS.Theme.Borders, 1)
+                
+                Btn.MouseEnter:Connect(function()
+                    Utility:Tween(Btn, {BackgroundColor3 = RobloxUS.Theme.ButtonHover, TextColor3 = RobloxUS.Theme.TextColor}, 0.15)
+                end)
+                
+                Btn.MouseLeave:Connect(function()
+                    Utility:Tween(Btn, {BackgroundColor3 = RobloxUS.Theme.DarkGray, TextColor3 = RobloxUS.Theme.DimText}, 0.15)
+                end)
+                
+                Btn.MouseButton1Click:Connect(function()
+                    local x = Mouse.X - Btn.AbsolutePosition.X
+                    local y = Mouse.Y - Btn.AbsolutePosition.Y
+                    Utility:Ripple(Btn, x, y)
+                    callback()
+                end)
+                
+                return Btn
+            end
+            
+            ButtonRow.Button1 = CreateRowButton(button1Name, button1Callback, 1)
+            ButtonRow.Button2 = CreateRowButton(button2Name, button2Callback, 2)
+            
+            table.insert(Section.Elements, ButtonRow)
+            return ButtonRow
+        end
+        
+        --// Graph Element
+        function Section:AddGraph(config)
+            config = config or {}
+            local graphName = config.Name or "This is a graph"
+            local graphType = config.Type or "Line" -- "Line" or "Grid"
+            local graphWidth = config.Width or 250
+            local graphHeight = config.Height or 120
+            
+            local Graph = {
+                Data = config.Data or {},
+                Type = graphType
+            }
+            
+            local GraphFrame = Utility:Create("Frame", {
+                Name = graphName .. "_Graph",
+                BackgroundColor3 = RobloxUS.Theme.PrimaryDark,
+                Size = UDim2.new(1, 0, 0, graphHeight + 24),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            Utility:AddCorner(GraphFrame, 4)
+            Utility:AddStroke(GraphFrame, RobloxUS.Theme.Borders, 1)
+            
+            local GraphTitle = Utility:Create("TextLabel", {
+                Name = "Title",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 8, 0, 0),
+                Size = UDim2.new(1, -16, 0, 20),
+                Font = Enum.Font.GothamMedium,
+                Text = graphName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = GraphFrame
+            })
+            
+            local GraphCanvas = Utility:Create("Frame", {
+                Name = "Canvas",
+                BackgroundColor3 = RobloxUS.Theme.SecondaryDark,
+                Position = UDim2.new(0, 8, 0, 22),
+                Size = UDim2.new(1, -16, 0, graphHeight - 4),
+                ZIndex = 6,
+                Parent = GraphFrame
+            })
+            Utility:AddCorner(GraphCanvas, 4)
+            
+            if graphType == "Line" then
+                -- Create line graph visualization
+                local lineData = config.Data or {0.2, 0.5, 0.3, 0.8, 0.4, 0.6, 0.9, 0.3, 0.7, 0.5}
+                
+                for i = 1, #lineData - 1 do
+                    local x1 = (i - 1) / (#lineData - 1)
+                    local y1 = 1 - lineData[i]
+                    local x2 = i / (#lineData - 1)
+                    local y2 = 1 - lineData[i + 1]
+                    
+                    local dx = x2 - x1
+                    local dy = y2 - y1
+                    local length = math.sqrt(dx * dx + dy * dy)
+                    local angle = math.atan2(dy, dx)
+                    
+                    local Line = Utility:Create("Frame", {
+                        Name = "Line_" .. i,
+                        AnchorPoint = Vector2.new(0, 0.5),
+                        BackgroundColor3 = RobloxUS.Theme.TextColor,
+                        Position = UDim2.new(x1, 0, y1, 0),
+                        Size = UDim2.new(length, 0, 0, 2),
+                        Rotation = math.deg(angle),
+                        ZIndex = 7,
+                        Parent = GraphCanvas
+                    })
+                end
+                
+                -- Add data points
+                for i, value in ipairs(lineData) do
+                    local x = (i - 1) / (#lineData - 1)
+                    local y = 1 - value
+                    
+                    local Point = Utility:Create("Frame", {
+                        Name = "Point_" .. i,
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        BackgroundColor3 = RobloxUS.Theme.AccentColor,
+                        Position = UDim2.new(x, 0, y, 0),
+                        Size = UDim2.new(0, 6, 0, 6),
+                        ZIndex = 8,
+                        Parent = GraphCanvas
+                    })
+                    Utility:AddCorner(Point, 3)
+                end
+                
+            elseif graphType == "Grid" then
+                -- Create 2x2 grid
+                local CoordLabel = Utility:Create("TextLabel", {
+                    Name = "Coords",
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(1, -60, 0, 0),
+                    Size = UDim2.new(0, 60, 0, 16),
+                    Font = Enum.Font.Code,
+                    Text = "X: 0, Y: 0",
+                    TextColor3 = RobloxUS.Theme.DimText,
+                    TextSize = 10,
+                    TextXAlignment = Enum.TextXAlignment.Right,
+                    ZIndex = 7,
+                    Parent = GraphTitle
+                })
+                
+                local GridLayout = Utility:Create("UIGridLayout", {
+                    CellSize = UDim2.new(0.5, -2, 0.5, -2),
+                    CellPadding = UDim2.new(0, 4, 0, 4),
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Parent = GraphCanvas
+                })
+                
+                local GridPadding = Utility:Create("UIPadding", {
+                    PaddingTop = UDim.new(0, 4),
+                    PaddingBottom = UDim.new(0, 4),
+                    PaddingLeft = UDim.new(0, 4),
+                    PaddingRight = UDim.new(0, 4),
+                    Parent = GraphCanvas
+                })
+                
+                for i = 1, 4 do
+                    local Cell = Utility:Create("Frame", {
+                        Name = "Cell_" .. i,
+                        BackgroundColor3 = RobloxUS.Theme.PrimaryDark,
+                        LayoutOrder = i,
+                        ZIndex = 7,
+                        Parent = GraphCanvas
+                    })
+                    Utility:AddCorner(Cell, 4)
+                end
+            end
+            
+            function Graph:UpdateData(newData)
+                Graph.Data = newData
+                -- Clear and redraw graph
+                for _, child in ipairs(GraphCanvas:GetChildren()) do
+                    if child:IsA("Frame") then
+                        child:Destroy()
+                    end
+                end
+                -- Redraw logic here
+            end
+            
+            table.insert(Section.Elements, Graph)
+            return Graph
+        end
+        
+        --// Status Element
+        function Section:AddStatus(config)
+            config = config or {}
+            local statusName = config.Name or "Status"
+            local statusDefault = config.Default or "Online"
+            local statusColor = config.Color or RobloxUS.Theme.StatusGreen
+            
+            local Status = {Value = statusDefault, Color = statusColor}
+            
+            local StatusFrame = Utility:Create("Frame", {
+                Name = statusName .. "_Status",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 28),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local StatusLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0.5, 0, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = statusName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = StatusFrame
+            })
+            
+            local StatusValue = Utility:Create("TextLabel", {
+                Name = "Value",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0.5, 0, 0, 0),
+                Size = UDim2.new(0.5, 0, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = statusDefault,
+                TextColor3 = statusColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Right,
+                ZIndex = 6,
+                Parent = StatusFrame
+            })
+            
+            function Status:Set(value, color)
+                Status.Value = value
+                StatusValue.Text = value
+                if color then
+                    Status.Color = color
+                    StatusValue.TextColor3 = color
+                end
+            end
+            
+            table.insert(Section.Elements, Status)
+            return Status
+        end
+        
+        --// Keybind Combo Element (Multiple keys)
+        function Section:AddKeybindCombo(config)
+            config = config or {}
+            local comboName = config.Name or "Keybinds"
+            local comboDefault = config.Default or {Enum.KeyCode.LeftShift, Enum.KeyCode.C}
+            local comboCallback = config.Callback or function() end
+            
+            local KeybindCombo = {Value = comboDefault}
+            
+            local ComboFrame = Utility:Create("Frame", {
+                Name = comboName .. "_Combo",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 28),
+                LayoutOrder = #Section.Elements + 1,
+                ZIndex = 5,
+                Parent = ElementsContainer
+            })
+            
+            local ComboLabel = Utility:Create("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0.4, 0, 1, 0),
+                Font = Enum.Font.Gotham,
+                Text = comboName,
+                TextColor3 = RobloxUS.Theme.TextColor,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 6,
+                Parent = ComboFrame
+            })
+            
+            local comboText = ""
+            for i, key in ipairs(comboDefault) do
+                comboText = comboText .. key.Name
+                if i < #comboDefault then
+                    comboText = comboText .. " + "
+                end
+            end
+            
+            local ComboDisplay = Utility:Create("TextLabel", {
+                Name = "Display",
+                BackgroundColor3 = RobloxUS.Theme.DarkGray,
+                Position = UDim2.new(0.4, 0, 0, 2),
+                Size = UDim2.new(0.6, 0, 0, 24),
+                Font = Enum.Font.GothamMedium,
+                Text = comboText,
+                TextColor3 = RobloxUS.Theme.AccentColor,
+                TextSize = 10,
+                ZIndex = 6,
+                Parent = ComboFrame
+            })
+            Utility:AddCorner(ComboDisplay, 4)
+            Utility:AddStroke(ComboDisplay, RobloxUS.Theme.Borders, 1)
+            
+            local keysHeld = {}
+            
+            UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    keysHeld[input.KeyCode] = true
+                    
+                    local allHeld = true
+                    for _, key in ipairs(KeybindCombo.Value) do
+                        if not keysHeld[key] then
+                            allHeld = false
+                            break
+                        end
+                    end
+                    
+                    if allHeld and not gameProcessed then
+                        comboCallback()
+                    end
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    keysHeld[input.KeyCode] = nil
+                end
+            end)
+            
+            function KeybindCombo:Set(keys)
+                KeybindCombo.Value = keys
+                local text = ""
+                for i, key in ipairs(keys) do
+                    text = text .. key.Name
+                    if i < #keys then
+                        text = text .. " + "
+                    end
+                end
+                ComboDisplay.Text = text
+            end
+            
+            table.insert(Section.Elements, KeybindCombo)
+            return KeybindCombo
+        end
+        
+        return Section
+    end
+    
+    --// Notification System
+    function Window:Notify(config)
+        config = config or {}
+        local notifyTitle = config.Title or "Notification"
+        local notifyText = config.Text or "This is a notification"
+        local notifyDuration = config.Duration or 3
+        local notifyType = config.Type or "Info" -- Info, Success, Warning, Error
+        
+        local typeColors = {
+            Info = RobloxUS.Theme.AccentColor,
+            Success = RobloxUS.Theme.StatusGreen,
+            Warning = Color3.fromRGB(255, 170, 0),
+            Error = Color3.fromRGB(255, 70, 70)
+        }
+        
+        local NotifyFrame = Utility:Create("Frame", {
+            Name = "Notification",
+            AnchorPoint = Vector2.new(1, 1),
+            BackgroundColor3 = RobloxUS.Theme.SecondaryDark,
+            Position = UDim2.new(1, -20, 1, -20),
+            Size = UDim2.new(0, 280, 0, 0),
+            ClipsDescendants = true,
+            ZIndex = 100,
+            Parent = ScreenGui
+        })
+        Utility:AddCorner(NotifyFrame, 6)
+        Utility:AddStroke(NotifyFrame, typeColors[notifyType] or typeColors.Info, 1)
+        
+        local NotifyBar = Utility:Create("Frame", {
+            Name = "Bar",
+            BackgroundColor3 = typeColors[notifyType] or typeColors.Info,
+            Size = UDim2.new(0, 4, 1, 0),
+            ZIndex = 101,
+            Parent = NotifyFrame
+        })
+        
+        local NotifyTitle = Utility:Create("TextLabel", {
+            Name = "Title",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 14, 0, 8),
+            Size = UDim2.new(1, -20, 0, 18),
+            Font = Enum.Font.GothamBold,
+            Text = notifyTitle,
+            TextColor3 = RobloxUS.Theme.TextColor,
+            TextSize = 13,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 101,
+            Parent = NotifyFrame
+        })
+        
+        local NotifyText = Utility:Create("TextLabel", {
+            Name = "Text",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 14, 0, 28),
+            Size = UDim2.new(1, -20, 0, 40),
+            Font = Enum.Font.Gotham,
+            Text = notifyText,
+            TextColor3 = RobloxUS.Theme.DimText,
+            TextSize = 11,
+            TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            ZIndex = 101,
+            Parent = NotifyFrame
+        })
+        
+        -- Animate in
+        Utility:Tween(NotifyFrame, {Size = UDim2.new(0, 280, 0, 70)}, 0.3, Enum.EasingStyle.Back)
+        
+        -- Progress bar
+        local ProgressBar = Utility:Create("Frame", {
+            Name = "Progress",
+            BackgroundColor3 = typeColors[notifyType] or typeColors.Info,
+            Position = UDim2.new(0, 0, 1, -3),
+            Size = UDim2.new(1, 0, 0, 3),
+            ZIndex = 101,
+            Parent = NotifyFrame
+        })
+        
+        Utility:Tween(ProgressBar, {Size = UDim2.new(0, 0, 0, 3)}, notifyDuration, Enum.EasingStyle.Linear)
+        
+        -- Animate out
+        task.delay(notifyDuration, function()
+            Utility:Tween(NotifyFrame, {Size = UDim2.new(0, 280, 0, 0)}, 0.2)
+            task.delay(0.2, function()
+                NotifyFrame:Destroy()
+            end)
+        end)
+    end
+    
+    --// Toggle Window Visibility
+    function Window:Toggle()
+        MainFrame.Visible = not MainFrame.Visible
+    end
+    
+    function Window:Destroy()
+        ScreenGui:Destroy()
+    end
+    
+    -- Open animation
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    Utility:Tween(MainFrame, {Size = windowSize}, 0.4, Enum.EasingStyle.Back)
+    
+    return Window
+end
+
+return RobloxUS
+
